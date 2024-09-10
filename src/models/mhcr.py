@@ -305,6 +305,17 @@ class MHCR(GeneralRecommender):
         scores = torch.matmul(u_embeddings, restore_item_e.transpose(0, 1))
         return scores
 
+class EmbRegularization(nn.Module):
+    def __init__(self, p_norm=2):
+        super().__init__()
+        self.p_norm = p_norm
+
+    def forward(self, *inputs):
+        total_loss = torch.tensor(0.0, device=inputs[-1].device)
+        for tensor in inputs:
+            total_loss += torch.norm(tensor, p=self.p_norm)
+        regularized_loss = total_loss / inputs[-1].size(0)
+        return regularized_loss
 
 class Gate(nn.Module):
     def __init__(self, embedding_dim):
@@ -361,16 +372,3 @@ class GraphRankContrast(nn.Module):
         neg_score = torch.exp(neg_score / self.temperature)
         cl_loss = -torch.log(pos_score / (pos_score + neg_score))
         return torch.mean(cl_loss)
-
-
-class EmbRegularization(nn.Module):
-    def __init__(self, p_norm=2):
-        super().__init__()
-        self.p_norm = p_norm
-
-    def forward(self, *inputs):
-        total_loss = torch.tensor(0.0, device=inputs[-1].device)
-        for tensor in inputs:
-            total_loss += torch.norm(tensor, p=self.p_norm)
-        regularized_loss = total_loss / inputs[-1].size(0)
-        return regularized_loss

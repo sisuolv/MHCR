@@ -5,7 +5,7 @@
 
 This is the Pytorch implementation for our  paper:
 
-![overview_20240912215702_00](./README.assets/overview_20240912215702_00.jpg)
+![overview_20240912222556_00](./README.assets/overview_20240912222556_00.jpg)
 
 ## Enviroment Requirement
 - PyTorch 2.0.0

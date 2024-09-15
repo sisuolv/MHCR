@@ -16,9 +16,9 @@ import platform
 import os
 
 
-def quick_start(model, dataset, config_dict, save_model=True, mg=False):
+def quick_start(model, dataset, config_dict, save_model=True):
     # merge config dict
-    config = Config(model, dataset, config_dict, mg)
+    config = Config(model, dataset, config_dict)
     init_logger(config)
     logger = getLogger()
     # print config infor
@@ -34,7 +34,7 @@ def quick_start(model, dataset, config_dict, save_model=True, mg=False):
     train_dataset, valid_dataset, test_dataset = dataset.split()
     logger.info('\n====Training====\n' + str(train_dataset))
     logger.info('\n====Validation====\n' + str(valid_dataset))
-    logger.info('\n====Testing====\n' + str(test_dataset))
+    logger.info('\n====Testing_3====\n' + str(test_dataset))
 
     # wrap into dataloader
     train_data = TrainDataLoader(config, train_dataset, batch_size=config['train_batch_size'], shuffle=True)
@@ -75,7 +75,7 @@ def quick_start(model, dataset, config_dict, save_model=True, mg=False):
         logger.info(model)
 
         # trainer loading and initialization
-        trainer = get_trainer()(config, model, mg)
+        trainer = get_trainer()(config, model)
         # debug
         # model training
         best_valid_score, best_valid_result, best_test_upon_valid = trainer.fit(train_data, valid_data=valid_data, test_data=test_data, saved=save_model)

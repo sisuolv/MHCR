@@ -27,6 +27,7 @@ class MHCR(GeneralRecommender):
         self.keep_rate = config['keep_rate']
         self.alpha = config['alpha']
         self.hc_loss_weight = config['hc_loss_weight']
+        self.embloss_weight = config['embloss_weight']
         self.ghc_weight = config['ghc_weight']
         self.tau = config['tau']
         self.n_nodes = self.n_users + self.n_items
@@ -43,7 +44,7 @@ class MHCR(GeneralRecommender):
 
         # Initialize additional modules
         self.graph_contrast = GraphRankContrast()
-
+        self.emb_reg = EmbRegularization()
         self.gate_module = Gate(self.embedding_dim)
         self.drop = nn.Dropout(p=1 - self.keep_rate)
         self.softmax = nn.Softmax(dim=-1)
@@ -366,8 +367,11 @@ class MHCR(GeneralRecommender):
         # Calculate contrastive losses
         cl_loss_items = self.contrastive_loss(side_embeds_items[pos_items], content_embeds_items[pos_items])
         cl_loss_users = self.contrastive_loss(side_embeds_users[users], content_embeds_user[users])
+
+        # Embedding regularization loss
+        emb_loss = self.embloss_weight * self.emb_reg(ua_embeddings, ia_embeddings)
         
-        contrastive_loss = bpr_loss + (cl_loss_items + cl_loss_users) * self.cl_loss 
+        loss = bpr_loss + (cl_loss_items + cl_loss_users) * self.cl_loss + emb_loss
 
         # Batch hypergraph contrastive loss
         batch_hc_loss = self.contrastive_loss(u_image_embs[users], u_text_embs[users], u_video_embs[users], u_text_embs) + self.contrastive_loss(i_image_embs[pos_items], i_text_embs[pos_items], i_video_embs[pos_items], i_text_embs)
@@ -376,7 +380,7 @@ class MHCR(GeneralRecommender):
         graph_hypergraph_contrast_loss = self.graph_contrast(ai_hyper_embs, image_embeds) + self.graph_contrast(av_hyper_embs, video_embeds) + self.graph_contrast(at_hyper_embs, text_embeds)
 
         # Total loss
-        total_loss = contrastive_loss + self.hc_loss_weight * batch_hc_loss + self.ghc_weight * graph_hypergraph_contrast_loss
+        total_loss = loss + self.hc_loss_weight * batch_hc_loss + self.ghc_weight * graph_hypergraph_contrast_loss
         return total_loss
 
 
@@ -388,6 +392,19 @@ class MHCR(GeneralRecommender):
         scores = torch.matmul(u_embeddings, restore_item_e.transpose(0, 1))
         return scores
 
+
+class EmbRegularization(nn.Module):
+    def __init__(self, p_norm=2):
+        super().__init__()
+        self.p_norm = p_norm
+
+    def forward(self, *inputs):
+        """Calculate embedding regularization loss."""
+        total_loss = torch.tensor(0.0, device=inputs[-1].device)
+        for tensor in inputs:
+            total_loss += torch.norm(tensor, p=self.p_norm)
+        regularized_loss = total_loss / inputs[-1].size(0)
+        return regularized_loss
 
 
 class Gate(nn.Module):
